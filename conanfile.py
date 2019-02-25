@@ -4,6 +4,7 @@ from conans.model import Generator
 
 from functools import wraps
 import io
+import os
 import sys
 import textwrap
 
@@ -154,7 +155,8 @@ class GNGenerator(Generator):
 
     _output = ConanOutput(sys.stdout, True)
 
-    def _get_gn_file_content(self, dep_name, dep_cpp_info):
+    @staticmethod
+    def generateGNBuildFile(dep_name, dep_cpp_info):
 
         configs = list()
 
@@ -231,21 +233,17 @@ class GNGenerator(Generator):
 
     @property
     def filename(self):
-        #root_build_thirdparty = os.path.join("thirdparty", "conan")
-        #tools.mkdir(root_build_thirdparty)
-        #with tools.chdir(root_build_thirdparty):
-        for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
-            tools.mkdir(dep_name)
-            with tools.chdir(dep_name):
-                with open("BUILD.gn", "w") as fd:
-                    fd.write(self._get_gn_file_content(dep_name, dep_cpp_info))
-        return "BUILD.gn"
+        return False
 
     @property
     def content(self):
-        return "# All the files in the subdirectories are generated using Conan\n" + \
-               "# Licence: {}\n".format(GNGeneratorConanFile.licence) + \
-               "conan_gn_generator_version = \"{}\"\n".format(GNGeneratorConanFile.version)
+        gn_build_files = dict()
+        for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
+            if dep_name != GNGeneratorConanFile.name:
+                content = self.generateGNBuildFile(dep_name, dep_cpp_info)
+                gn_build_files[os.path.join(dep_name, "BUILD.gn")] = content
+        return gn_build_files
+
 
 class GNGeneratorConanFile(ConanFile):
     name = "GNGenerator"
